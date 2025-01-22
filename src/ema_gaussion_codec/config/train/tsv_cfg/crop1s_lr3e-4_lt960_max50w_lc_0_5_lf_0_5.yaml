@@ -1,0 +1,123 @@
+# @package _group_
+
+hydra:
+  job:
+    config:
+      override_dirname:
+        kv_sep: '-'
+        item_sep: '__'
+        exclude_keys:
+          - run
+          - task.data
+          - task.label_dir
+  run:
+    dir: /modelblob/users/v-zhikangniu/models/gradient_rvq/crop1s_lr3e-4_lt960_max50w_lc_0_5_lf_0_5
+  sweep:
+    dir: ???
+    subdir: ${hydra.job.config_name}__${hydra.job.override_dirname}
+
+
+common:
+  fp16: false
+  log_format: json
+  log_interval: 200
+  seed: 3401
+  wandb_project: Gradient-GuassionVQ
+
+checkpoint:
+  save_interval_updates: 1000
+  keep_interval_updates: 30
+
+
+distributed_training:
+  ddp_backend: no_c10d
+  distributed_backend: 'nccl'
+  distributed_world_size: 8
+  nprocs_per_node: 8
+  distributed_port: 23671
+  find_unused_parameters: false
+
+task:
+  _name: encodec_training # need change
+  data: /scratch/amlt_code/examples/ema_gaussion_codec/data_preprocess/lt960/
+  sample_rate: 24_000
+  max_sample_size: 480000 # 20s, ignore > max sample size audio
+  min_sample_size: 6000 # 0.5s, ignore < min sample size audio
+  crop_size: 24_000
+  not_train_discriminator_step: 50000
+
+dataset:
+  num_workers: 0 # if set not 0, it will lead bug
+  max_tokens: 700000
+  skip_invalid_size_inputs_valid_test: true
+  disable_validation: True
+  validate_interval: 5
+  validate_interval_updates: 10000
+  required_batch_size_multiple: 1
+
+criterion:
+  _name: encodec
+  loss_weights:
+    time_domain_loss: 0.5 # default 0.1
+    frequency_domain_loss: 0.5
+    commit_loss: 0.5 #1
+    adversial_loss: 3.0
+    feature_matching_loss: 3.0
+  n_mel_channels: 64
+
+optimization:
+  max_update: 1000000
+  lr: [0]
+  clip_norm: 20.0
+
+optimizer:
+  _name: composite
+  groups:
+    generator:
+      lr: [0.0003]
+      optimizer:
+        _name: adam
+        adam_betas: (0.8,0.9)
+        adam_eps: 1e-6
+        weight_decay: 0.01
+      lr_scheduler:
+        _name: fixed
+        warmup_updates: 3000
+    discriminator:
+      lr: [0.0003]
+      optimizer:
+        _name: adam
+        adam_betas: (0.8,0.9)
+        adam_eps: 1e-6
+        weight_decay: 0.01
+      lr_scheduler:
+        _name: fixed
+        warmup_updates: 0
+
+lr_scheduler: pass_through
+
+model:
+  _name: encodec
+  target_bandwidths: [1.,1.5,3.,4.5,6.,9.,12.,16.,24.] # 1,2,4,6,8,12,16,24,32
+  channels: 1
+  model_norm: 'weight_norm'
+  audio_normalize: True
+  overlap: 0.01
+  casual: false
+  encoder_ratios: [8, 5, 4, 2]
+  decoder_ratios: [8, 5, 4, 2]
+  encoder_dimension: 128
+  decoder_dimension: 128
+  bins: 1024
+  n_q: 0
+  lstm: 2
+  transformer: 0
+  n_head: 8
+  discriminator: msstft
+  discriminator_strategy: single # mix
+  
+  filters: 32
+  disc_hop_lengths: [512,256,128,64,32]
+  disc_win_lengths: [2048,1024,512,256,128]
+  disc_n_ffts: [2048,1024,512,256,128]
+

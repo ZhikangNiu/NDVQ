@@ -2,7 +2,7 @@
 > Official repository of the IEEE SLT 2024 paper "NDVQ: Robust Neural Audio Codec with Normal Distribution-Based Vector Quantization"
 
 >[!IMPORTANT] 
-> I will release a clean codebase after refactoring and thoroughly testing the performance, so please be patient.
+> I sincerely apologize; I haven't had much time recently to clean my code, so I'll be sharing some of the experimental dirty codebase I've been using.
 
 We introduced Normal Distribution Vector Quantization (NDVQ), which innovatively applies a distribution-based approach to vector quantization in audio codec. NDVQ’s adoption of normal distributions within the codebook enhances robustness and generalization capability, leading to a better reconstructed audio quality, especially at extremely low bandwidths. Our comparative analysis with EnCodec demonstrates NDVQ’s superior performance in audio compression tasks and downstream codec-based speech synthesis tasks, confirming its potential as a more resilient alternative to traditional VQ methods. While the real-world audio environment encompasses
 speech, ambient sounds, and music, this investigation focused solely on speech, leaving other audio domains unexplored and thus limiting the applications. The challenge of developing a universal audio compression model based on our method represents a compelling
@@ -33,6 +33,10 @@ git clone https://github.com/NVIDIA/apex.git \
 cd apex
 git checkout 9263bc8 \
 pip install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+
+# clone repo
+git clone https://github.com/ZhikangNiu/NDVQ.git
+mv src/ema_gaussion_codec fairseq/examples
 ```
 
 ### Docker
@@ -42,11 +46,18 @@ docker pull zkniu/fairseq:torch1.12-cu113-fairseq
 ```
 More details about this image, you can check our Dockerfile in this repo.
 ## Training
-
-## Inference
-
-## Evaluation
-
+### Data Prepare
+See examples/ema_gaussion_codec/scripts/wav2vec_manifest.py
+### Train
+```
+cd examples/ema_gaussion_codec/scripts/train
+bash train.sh [CONFIG_NAME]
+```
+## Inference & Evaluation
+```
+cd examples/ema_gaussion_codec/inference
+bash compute_metrics.sh [ref_dir] [gen_dir] [bw]
+```
 ## Acknowledge
 1. We borrowed a lot of code from [encodec](https://github.com/facebookresearch/encodec)
 2. We borrowed a lot of code from [descript-audio-codec](https://github.com/descriptinc/descript-audio-codec/tree/main)
